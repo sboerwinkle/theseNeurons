@@ -1,0 +1,53 @@
+
+Each organism gets a certain number of bits representing the room -
+-Which ways are exits
+-Which color buttons are present
+-What kind of room it is (poison arrow room? cafeteria?)
+-If there's food in the room
+-How many people are in the room
+  "2^n or more", for like 6 bits or so
+-3 bits for the sign of a random person in the room
+-How much food they have - see "how many people in room"
+
+Additionally, there are several output bits for available actions
+-Eat food, if available. Slight penalty if it isn't?
+-Give your encounter some food
+-Stab your encounter
+-Push the button, if any
+-Change rooms
+-Set your sign
+
+Button types:
+Red button - links to a nearby poison arrow room, effectively stabbing everyone in it. (Worth mentioning here that I'm not sure of the effect of stabbing - instadeath or lost food?)
+Blue button - links to a nearby cafeteria. Creates food.
+
+Any number of features can appear in the same room, but only one button.
+Rooms and buttons of corresponding colors are linked in such a way as to minimise total distance
+
+People all spawn in the same place.
+
+
+
+
+
+Later thoughts
+I really need to minimize the number of inputs and outputs. Allow more detailed processing, but fewer individual bits. For instance, rather than 3 bits for sign, 1 bit for interpersonal communication.
+
+Problem! We need to give them continuous communication, which right now they don't have. IRL, we have many, many bits of input we can use to correlate with ideas of who's who, but we want to minimize the number of bits they have to adopt. They might change associate mid-"conversation" and be none the wiser. If you have 3 guys in a room, there's no friggin way to tell who you're talking to, and absolutely no guarantee that any message you send gets there intact. Maybe they'd work around these restrictions fascinatingly, or maybe they'd just stay barbarians forever with no possibility of evolving more communicational discernment. Basically we want more bits with fewer bits, and the only good solution is to give them more time, but even then we can't tell who's who.
+
+Maybe what we need is a message passing interface. Some way they can read string of bits intelligently. Maybe even from multiple sources. And write their own string of... arbitrary length? No, a good cap like 10 will do. So they can jump through the available messages, jump through the characters of the message, and write their own messages. But for writing their own messages -- 1) read the status of the reading bit when they're on their own message 2) check the status of a different bit, and edit the corresponding bit of their message.
+
+So we're at -
+
+input:
+ - If we just stepped the world
+ - The status of the bit under our reader
+ - The status of our tape (current head position)
+
+output:
+ - Advance the reader head
+ - Advance the reader tape (reset head)
+ - What to set our tape to (current head position, regardless of tape)
+
+
+Hmm, needs work. Must go!
