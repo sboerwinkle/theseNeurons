@@ -71,7 +71,7 @@ static char connects(int r, int d){
 	}
 	int R = r;
 	int D = d+1;
-	int dest = R+dirs[D];
+	int dest = R+dirs[d];
 	do{
 		if(hasDoor(R, D)){
 			R += dirs[D];
