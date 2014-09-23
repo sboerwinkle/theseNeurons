@@ -78,42 +78,6 @@ static void mutateOrganism(organism* who){
 	}
 }
 
-static int globalValue1, globalValue2;
-
-static void doInput(organism* who){
-	char* memory = who->memory + who->memStart;
-	int i = 0;
-	for(; i < globalValue2; i++) memory[i] = 1;
-}
-
-static char doOutput(organism* who){
-	if(who->age==0){// If it hasn't been alive long enough to get the previous number, give it the benefit of the doubt.
-		who->age = 1;
-		who->score=10;
-		return 0;
-	}
-	char* memory = who->memory + who->memStart;
-	int i = 10;
-	int out = 0;
-	for(; i < 20; i++){
-		if(memory[i])
-			out++;
-	}
-	out = abs(out-globalValue1);
-	who->age+=1+out;
-	who->score += 10-out;
-
-	if(who->age >= 100){
-		if(who->score > bestScore){
-			bestScore = who->score;
-			exportOrganism(who, "best.org");
-			printf("%d\n", bestScore);
-		}
-		return 1;
-	}
-	return 0;
-}
-
 static int *subPopMasks, *subPopSizes;
 
 static void initSubPops(){
@@ -157,6 +121,7 @@ static void simulate(){
 
 	int j=0;
 	while(1){
+		doStepMap();
 		for(i=0; i<25; i++){
 			for(tmp=allMyChildren; tmp<end; tmp++){
 				prepOrganismMemory(tmp);
@@ -180,20 +145,13 @@ static void simulate(){
 			}
 			i++;
 		}
-		if(++j%2000 == 0){
-			printMap();
-			fputs("\n\n\n", stdout);
-			if(j == 2000*300){
+		if(++j%200 == 0){
+			if(j == 2000){
+				printMap();
+				fputs("\n\n\n", stdout);
 				j = 0;
-				quitMap();
-				initMap(); // Get a new map
-				for(tmp=allMyChildren; tmp<end; tmp++){
-					holdThis = tmp->neurons;
-					copyOrganism(tmp, tmp); // Clear it out
-					free(holdThis);
-					spawnGuy(tmp);
-				}
 			}
+			changeMap();
 		}
 	}
 #ifdef CONTINENTS

@@ -6,7 +6,8 @@
 
 #define CONTINENTS
 
-#define mapSize 10
+#define mapSize 20
+#define numMines 32
 
 typedef struct{
 	int sets[3][mem];
@@ -33,5 +34,4 @@ typedef struct organism{
 	int dir;
 	int moveDir;
 	struct organism** myLoc;
-	int winAge; // What your age gets set to if you beat the maze and restart
 } organism; // So much rides on this word. How many days, weeks, months... years... later will I be reading this line?

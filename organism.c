@@ -83,7 +83,7 @@ void importOrganism(organism *who, char *file){
 
 void exportOrganism(organism* who, char* file){
 	FILE* fp = fopen(file, "w");
-	fprintf(fp, "%d %d\n", mem, who->numNeurons);
+	fprintf(fp, "%d %d\n", who->score, who->numNeurons);
 	int k = 0;
 	neuron *n;
 	for(; k < who->numNeurons; k++){

@@ -37,16 +37,19 @@ char hasDoor(int r, int dir){
 int dirs[4] = {1, mapSize, -1, -mapSize};
 
 void printMap(){
+	char* letters = "@ABCDEFGHIJKLMNOPQRSTUVWXY";
+	char* numbers = "+12345678";
 	int i, j;
-//	for(i=0; i<1+mapSize*2; i++) fputc('+', stdout);
-//	fputc('\n', stdout);
 	for(i=0; i < mapSize; i++){
-//		fputc('+', stdout);
 		for(j=0; j<mapSize; j++){
-			fputc(rooms[i*mapSize+j].numOrganisms?'@':'+', stdout);
+			int num = rooms[i*mapSize+j].numOrganisms;
+			if(rooms[i*mapSize+j].roomTape[0]){
+				fputc(num>=26?'Z':letters[num], stdout);
+			}else{
+				fputc(num>=9?'9':numbers[num], stdout);
+			}
 			fputc(hasDoor(i*mapSize+j, 0)?'-':' ', stdout);
 		}
-//		fputs("\n+", stdout);
 		fputc('\n', stdout);
 		for(j=0; j<mapSize; j++){
 			fputc(hasDoor(i*mapSize+j, 1)?'|':' ', stdout);
@@ -59,9 +62,62 @@ void printMap(){
 int mapVersion = 0;
 
 #define numRooms (mapSize*mapSize)
+
+static char connects(int r, int d){
+	if(d){
+		rooms[r].doorDown = 0;
+	}else{
+		rooms[r].doorRight = 0;
+	}
+	int R = r;
+	int D = d+1;
+	int dest = R+dirs[D];
+	do{
+		if(hasDoor(R, D)){
+			R += dirs[D];
+			D=(D+3)%4;
+		}else D=(D+1)%4;
+	}while((r!=R || D!=d) && R!=dest);
+	if(R==dest) return 1;
+	if(d)
+		rooms[r].doorDown=1;
+	else
+		rooms[r].doorRight=1;
+	return 0;
+}
+
+void changeMap(){
+	mapVersion++;
+	int i = 0;
+	for(; i < numRooms; i++) rooms[i].roomTape[0] = 0;
+	for(i=0; i<numMines; i++){
+		int where;
+		do{
+			where = random()%numRooms;
+		}while(rooms[where].roomTape[0]);
+		rooms[where].roomTape[0] = 1;
+	}
+	while(1){
+		int r = random()%numRooms;
+		int d = random()%2;
+		if((d && r>numRooms-mapSize) || (!d && (r+1)%mapSize == 0)) continue;
+		if(hasDoor(r, d)){
+			if(random()%2) continue; // So we slightly favor adding doors, to keep the balance.
+			if(connects(r, d)) return;
+		}else{
+			if(d){
+				rooms[r].doorDown = 1;
+			}else{
+				rooms[r].doorRight = 1;
+			}
+			return;
+		}
+	}
+}
+
 void initMap(){
 	bestScore = 0;
-	mapVersion++;
+	//mapVersion++;
 	rooms = malloc(sizeof(room)*mapSize*mapSize);
 	int i = 0;
 	for(; i < numRooms; i++){
@@ -73,35 +129,15 @@ void initMap(){
 	}
 	for(i=mapSize-1; i < numRooms; i+=mapSize) rooms[i].doorRight = 0;
 	for(i=numRooms-mapSize; i<numRooms; i++) rooms[i].doorDown = 0;
-	int numDoors = 0;
-	while(numDoors < numRooms/2){
+	int numWalls = 0;
+	while(numWalls < numRooms/2){
 		int r = random()%numRooms;
 		int d = random()%2;
 		if(!hasDoor(r, d)) continue;
-		int dest;
-		int R=r, D=d+1;
-		if(d){
-			rooms[r].doorDown = 0;
-			dest = r+mapSize;
-		}else{
-			rooms[r].doorRight = 0;
-			dest = r+1;
-		}
-		do{
-			if(hasDoor(R, D)){
-				R += dirs[D];
-				D=(D+3)%4;
-			}else D=(D+1)%4;
-		}while((r!=R || D!=d) && R!=dest);
-		if(R==dest){
-			numDoors++;
-		}else{
-			if(d)
-				rooms[r].doorDown=1;
-			else
-				rooms[r].doorRight=1;
-		}
+		if(connects(r, d))
+			numWalls++;
 	}
+	changeMap();
 }
 
 static void addGuy(organism* who){
@@ -124,10 +160,8 @@ static void newStepGuy(organism* who){
 }
 
 void spawnGuy(organism* who){
-	//who->myRoom = mapSize/2*mapSize+mapSize/2;
 	who->myRoom = 0;
 	who->dir = 0;
-	who->winAge = who->age;
 	who->gotPoint = 0;
 	addGuy(who);
 
@@ -162,14 +196,13 @@ void doInputGuy(organism* who){
 
 static void givePointGuy(organism* who){
 	who->gotPoint = 1;
-	who->age = who->winAge;
+	who->age -= 15;
 	who->score++;
 	if(who->score > bestScore){
 		bestScore = who->score;
 		char string[15];
 		sprintf(string, "best%d.org", mapVersion);
 		exportOrganism(who, string);
-		//printf("%d\n", bestScore);
 	}
 }
 
@@ -178,25 +211,31 @@ char doStepGuy(organism* who){
 	if(d!=-1 && hasDoor(who->myRoom, d)){
 		removeGuy(who);
 		who->myRoom += dirs[d];
-		if(who->myRoom == numRooms-1){
-			who->myRoom = 0;
-			givePointGuy(who);
-		}
 		addGuy(who);
 	}
 
 	newStepGuy(who);
 
-	who->age+=mapSize*3
-		-who->myRoom%mapSize
-		-who->myRoom/mapSize;
-	who->winAge+=mapSize/2;
+	who->age+=10;
 
 	if(who->age >= 10000){
 		removeGuy(who);
 		return 1;
 	}
 	return 0;
+}
+
+void doStepMap(){
+	int i = 0;
+	for(; i < numRooms; i++){
+		if(rooms[i].roomTape[0]){
+			int num = 1+abs(3-rooms[i].numOrganisms);
+			int j = 0;
+			for(; j < rooms[i].numOrganisms; j++){
+				if(0 == random()%num) givePointGuy(rooms[i].occupants[j]);
+			}
+		}
+	}
 }
 
 void doOutputGuy(organism* who){
