@@ -211,24 +211,24 @@ static void navigate(){
 
 	int j=0;
 	while(1){
-		for(i=0; i<5; i++){
+		doStepMap();
+		for(i=0; i<2; i++){
 			for(tmp=allMyChildren; tmp<end; tmp++){
 				prepOrganismMemory(tmp);
 				doInputGuy(tmp);
 				printf("Guy %ld\n", tmp-allMyChildren);
 
-				if(tmp->memory[0]) puts("Door to left");
 				if(tmp->memory[1]) puts("Door ahead");
-				if(tmp->memory[2]) puts("Door to right");
+				if(tmp->memory[2]) puts("Got a point!");
 				if(tmp->memory[3]) puts("A brand new step!");
 				if(tmp->memory[4]) puts("Our own");
 				printf("Tape reads: %d\n", tmp->memory[5]);
 				if(NULL == fgets(input, 10, stdin)) return; // No cleanup, because we're monsters.
 				int i = 0;
-				for(; i < 5; i++){
+				for(; i < 6; i++){
 					if(input[i]>='a'&&input[i]<='z') tmp->memory[10+i] = 1;
 				}
-				if(input[5]) tmp->memory[5] = input[5]>='a'&&input[5]<='z';
+				if(input[6]!='\n') tmp->memory[5] = input[6]>='a'&&input[6]<='z';
 				doOutputGuy(tmp);
 			}
 		}
@@ -248,20 +248,13 @@ static void navigate(){
 			}
 			i++;
 		}
-		if(++j%2000 == 0){
-			printMap();
-			fputs("\n\n\n", stdout);
-			if(j == 2000*300){
+		printMap();
+		fputs("\n\n\n", stdout);
+		if(++j%200 == 0){
+			if(j == 2000){
 				j = 0;
-				quitMap();
-				initMap(); // Get a new map
-				for(tmp=allMyChildren; tmp<end; tmp++){
-					holdThis = tmp->neurons;
-					copyOrganism(tmp, tmp); // Clear it out
-					free(holdThis);
-					spawnGuy(tmp);
-				}
 			}
+			changeMap();
 		}
 	}
 #ifdef CONTINENTS

@@ -100,7 +100,7 @@ void changeMap(){
 	while(1){
 		int r = random()%numRooms;
 		int d = random()%2;
-		if((d && r>numRooms-mapSize) || (!d && (r+1)%mapSize == 0)) continue;
+		if((d && r>=numRooms-mapSize) || (!d && (r+1)%mapSize == 0)) continue;
 		if(hasDoor(r, d)){
 			if(random()%2) continue; // So we slightly favor adding doors, to keep the balance.
 			if(connects(r, d)) return;
@@ -196,8 +196,8 @@ void doInputGuy(organism* who){
 
 static void givePointGuy(organism* who){
 	who->gotPoint = 1;
-	who->age -= 15;
 	who->score++;
+	who->age -= 15+3000/(who->score);
 	if(who->score > bestScore){
 		bestScore = who->score;
 		char string[15];
@@ -218,7 +218,7 @@ char doStepGuy(organism* who){
 
 	who->age+=10;
 
-	if(who->age >= 10000){
+	if(who->age >= 2500){
 		removeGuy(who);
 		return 1;
 	}
