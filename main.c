@@ -107,12 +107,18 @@ static void simulate(){
 #endif
 	initMap();
 
-	organism steve = {.numNeurons=0};
-	importOrganism(&steve, "best.org");
-	organism *allMyChildren = malloc(sizeof(organism)*numKids);
+#define numSources 3
+	organism *sources = malloc(sizeof(organism) * numSources);
+	char name[14];
 	int i;
+	for (i=0; i < numSources; i++) {
+		sprintf(name, "source%d.org", i+1);
+		importOrganism(sources + i, name);
+	}
+	organism *allMyChildren = malloc(sizeof(organism)*numKids);
+
 	for(i = 0; i < numKids; i++){
-		copyOrganism(allMyChildren+i, &steve);
+		copyOrganism(allMyChildren+i, sources + i%numSources);
 		spawnGuy(allMyChildren+i);
 	};
 
@@ -159,6 +165,7 @@ static void simulate(){
 	free(subPopSizes);
 #endif
 	free(allMyChildren);
+	free(sources);
 	quitMap();
 }
 

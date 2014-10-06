@@ -197,7 +197,7 @@ void doInputGuy(organism* who){
 static void givePointGuy(organism* who){
 	who->gotPoint = 1;
 	who->score++;
-	who->age -= 15+3000/(who->score);
+	who->age -= 15;
 	if(who->score > bestScore){
 		bestScore = who->score;
 		char string[15];
@@ -218,7 +218,7 @@ char doStepGuy(organism* who){
 
 	who->age+=10;
 
-	if(who->age >= 2500){
+	if(who->age >= 2000){
 		removeGuy(who);
 		return 1;
 	}
