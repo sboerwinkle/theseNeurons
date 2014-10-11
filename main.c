@@ -107,7 +107,7 @@ static void simulate(){
 #endif
 	initMap();
 
-#define numSources 3
+#define numSources 5
 	organism *sources = malloc(sizeof(organism) * numSources);
 	char name[14];
 	int i;
