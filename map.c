@@ -2,21 +2,14 @@
 #include <stdio.h>
 #include <math.h>
 #include <string.h>
+#include <fcntl.h>
+#include <unistd.h>
 #include "globals.h"
 #include "organism.h"
 #include "main.h"
+#include "map.h"
 
-typedef struct room{
-	char typeMask;
-	char buttonType;
-	struct room* butonDest;
-	organism *(occupants[numKids]);
-	char roomTape[tapeSize];
-	int numOrganisms;
-	char doorRight, doorDown;
-}room;
-
-static room* rooms;
+room* rooms;
 
 char hasDoor(int r, int dir){
 	switch(dir){
@@ -59,7 +52,7 @@ void printMap(){
 	}
 }
 
-int mapVersion = 0;
+static int mapVersion = 0;
 
 #define numRooms (mapSize*mapSize)
 
@@ -122,7 +115,6 @@ void initMap(){
 	int i = 0;
 	for(; i < numRooms; i++){
 		rooms[i].typeMask = 0;
-		rooms[i].buttonType = 0;
 		rooms[i].numOrganisms = 0;
 		rooms[i].doorRight = rooms[i].doorDown = 1;
 		memset(rooms[i].roomTape, 0, tapeSize);
@@ -260,4 +252,28 @@ void doOutputGuy(organism* who){
 
 void quitMap(){
 	free(rooms);
+}
+
+void mapWriteEverythingToFile(int fd)
+{
+	int i = 0;
+	for (; i < numRooms; i++) {
+		write(fd, &rooms[i].typeMask, 1);
+		write(fd, &rooms[i].roomTape, tapeSize);
+		write(fd, &rooms[i].doorRight, 1);
+		write(fd, &rooms[i].doorDown, 1);
+	}
+	write(fd, &mapVersion, sizeof(int));
+}
+
+void mapReadEverythingFromFile(int fd)
+{
+	int i = 0;
+	for (; i < numRooms; i++) {
+		read(fd, &rooms[i].typeMask, 1);
+		read(fd, &rooms[i].roomTape, tapeSize);
+		read(fd, &rooms[i].doorRight, 1);
+		read(fd, &rooms[i].doorDown, 1);
+	}
+	read(fd, &mapVersion, sizeof(int));
 }

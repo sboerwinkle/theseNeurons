@@ -20,7 +20,7 @@ main.o: main.c globals.h organism.h map.h
 organism.o: organism.c globals.h
 	gcc $(CFLAGS) organism.c
 
-map.o: map.c globals.h organism.h main.h
+map.o: map.c globals.h organism.h main.h map.h
 	gcc $(CFLAGS) map.c
 
 clean:

@@ -3,11 +3,94 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <fcntl.h>
+#include <unistd.h>
 #include "globals.h"
 #include "organism.h"
 #include "map.h"
 
 int bestScore = 0;
+
+static char writeEverythingToFile(organism *orgs, char *file)
+{
+	int fd = creat(file, 00666);
+	if (fd == -1) {
+		puts("aw shit");
+		return 1;
+	}
+	int i = 0;
+	write(fd, &bestScore, sizeof(int));
+	for (; i < numKids; i++) {
+		write(fd, orgs[i].memory+orgs[i].memStart, mem);
+		write(fd, &orgs[i].numNeurons, sizeof(int));
+		int j = 0;
+		for (; j < orgs[i].numNeurons; j++) {
+			write(fd, orgs[i].neurons[j].nums, 3*sizeof(int));
+			int k = 0;
+			for (; k < 3; k++)
+				write(fd, orgs[i].neurons[j].sets[k], orgs[i].neurons[j].nums[k]*sizeof(int));
+			write(fd, &orgs[i].neurons[j].value, sizeof(int));
+		}
+		write(fd, &orgs[i].score, sizeof(int));
+		write(fd, &orgs[i].age, sizeof(int));
+		write(fd, &orgs[i].myTape, tapeSize);
+		write(fd, &orgs[i].whichTape, sizeof(int));
+		write(fd, &orgs[i].headIndex, sizeof(int));
+		write(fd, &orgs[i].newStep, 1);
+		write(fd, &orgs[i].gotPoint, 1);
+		write(fd, &orgs[i].myRoom, sizeof(int));
+		write(fd, &orgs[i].dir, sizeof(int));
+		write(fd, &orgs[i].moveDir, sizeof(int));
+		int dif = orgs[i].myLoc - rooms[orgs[i].myRoom].occupants;
+		write(fd, &dif, sizeof(int));
+	}
+	mapWriteEverythingToFile(fd);
+	close(fd);
+	return 0;
+}
+
+static char readEverythingFromFile(organism *orgs, char *file)
+{
+	int fd = open(file, O_RDONLY);
+	if (fd == -1) {
+		puts("aw shit");
+		return 1;
+	}
+	int i = 0;
+	read(fd, &bestScore, sizeof(int));
+	for (; i < numKids; i++) {
+		orgs[i].memStart = 0;
+		read(fd, orgs[i].memory, mem);
+		read(fd, &orgs[i].numNeurons, sizeof(int));
+		orgs[i].neurons = malloc(sizeof(neuron)*orgs[i].numNeurons);
+		int j = 0;
+		for (; j < orgs[i].numNeurons; j++) {
+			read(fd, orgs[i].neurons[j].nums, 3*sizeof(int));
+			int k = 0;
+			for (; k < 3; k++)
+				read(fd, orgs[i].neurons[j].sets[k], orgs[i].neurons[j].nums[k]*sizeof(int));
+			read(fd, &orgs[i].neurons[j].value, sizeof(int));
+		}
+		read(fd, &orgs[i].score, sizeof(int));
+		read(fd, &orgs[i].age, sizeof(int));
+		read(fd, &orgs[i].myTape, tapeSize);
+		read(fd, &orgs[i].whichTape, sizeof(int));
+		read(fd, &orgs[i].headIndex, sizeof(int));
+		read(fd, &orgs[i].newStep, 1);
+		read(fd, &orgs[i].gotPoint, 1);
+		read(fd, &orgs[i].myRoom, sizeof(int));
+		read(fd, &orgs[i].dir, sizeof(int));
+		read(fd, &orgs[i].moveDir, sizeof(int));
+		int dif;
+		read(fd, &dif, sizeof(int));
+		orgs[i].myLoc = rooms[orgs[i].myRoom].occupants + dif;
+		*orgs[i].myLoc = orgs+i;
+		rooms[orgs[i].myRoom].numOrganisms++;
+	}
+	mapReadEverythingFromFile(fd);
+	close(fd);
+	return 0;
+}
 
 static void copyOrganism(organism* to, organism* from){ // Doesn't actually copy - Rather, births a new one with the same brain layout. Only difference is that memory values are reset - should this be changed???
 	to->memStart = 0;
@@ -107,25 +190,30 @@ static void simulate(){
 #endif
 	initMap();
 
-#define numSources 5
-	organism *sources = malloc(sizeof(organism) * numSources);
-	char name[14];
-	int i;
-	for (i=0; i < numSources; i++) {
-		sprintf(name, "source%d.org", i+1);
-		importOrganism(sources + i, name);
-	}
 	organism *allMyChildren = malloc(sizeof(organism)*numKids);
+	if (readEverythingFromFile(allMyChildren, "save.dat")) {
+#define numSources 5
+		organism *sources = malloc(sizeof(organism) * numSources);
+		char name[14];
+		int i;
+		for (i=0; i < numSources; i++) {
+			sprintf(name, "source%d.org", i+1);
+			importOrganism(sources + i, name);
+		}
 
-	for(i = 0; i < numKids; i++){
-		copyOrganism(allMyChildren+i, sources + i%numSources);
-		spawnGuy(allMyChildren+i);
-	};
+		for(i = 0; i < numKids; i++){
+			copyOrganism(allMyChildren+i, sources + i%numSources);
+			spawnGuy(allMyChildren+i);
+		};
+		for (i = 0; i < numSources; i++)
+			free(sources[i].neurons);
+		free(sources);
+	}
 
 	organism *tmp, *end = allMyChildren+numKids;
 	neuron* holdThis;
 
-	int j=0;
+	int i, j=0;
 	while(1){
 		doStepMap();
 		for(i=0; i<25; i++){
@@ -152,12 +240,14 @@ static void simulate(){
 			i++;
 		}
 		if(++j%200 == 0){
+			changeMap();
 			if(j == 2000){
 				printMap();
 				fputs("\n\n\n", stdout);
 				j = 0;
+				writeEverythingToFile(allMyChildren, "save.tmp");
+				system("mv save.tmp save.dat");
 			}
-			changeMap();
 		}
 	}
 #ifdef CONTINENTS
@@ -165,7 +255,6 @@ static void simulate(){
 	free(subPopSizes);
 #endif
 	free(allMyChildren);
-	free(sources);
 	quitMap();
 }
 
