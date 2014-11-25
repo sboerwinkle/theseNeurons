@@ -44,43 +44,46 @@ int main(int argc, char **argv)
 					uo[n] = 1;
 				ns[i].fields[j][k] = n;
 			}
-			getc(stdin);
+			int c = getc(stdin);
+			if (c != '\n')
+				ungetc(c, stdin);
 		}
 		int n = parseNum(0);
 		ui[n] = 1;
 		ns[i].value = n;
 	}
+	printf("0 %d\n", val);
 	for (i = val - 1; i >= 0; i--) {
 		int j = 0, k;
 		for(; j<3; j++){
 			for(k = 0; k < ns[i].lengths[j]; k++) {
 				int n = ns[i].fields[j][k];
 				if (j < 2) {
-					if (uo[n]) {
+					//if (uo[n]) {
 						printf("%d ", n);
-					} else {
+					/*} else {
 						if ((n / 64) % 2) {
 							ns[i].shift += (j == 1) ? 1 : -1;
 						}
-					}
+					}*/
 				} else {
 					if (ui[n])
 						printf("%d ", n);
 				}
 			}
-			if (j == 1 && ns[i].shift) {
+			/*if (j == 1 && ns[i].shift) {
 				if (ns[i].shift > 0)
 					printf("+%d", ns[i].shift);
 				else
 					printf("-%d", -ns[i].shift);
-			}
+			}*/
 			fputc('\n', stdout);
 		}
-		if (uo[ns[i].value])
+		//if (uo[ns[i].value])
 			printf("%d\n", ns[i].value);
-		else
-			puts(((ns[i].value / 64) % 2) ? "[1]" : "[0]");
-		puts("--------------");
+		//else
+		//	puts(((ns[i].value / 64) % 2) ? "[1]" : "[0]");
+		//puts("--------------");
 	}
 	free(ns);
 	return 0;
