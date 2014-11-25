@@ -7,6 +7,9 @@ LFLAGS=-lm
 run: main.o organism.o map.o
 	gcc $(DEBUG) main.o organism.o map.o -o run $(LFLAGS)
 
+visualizer: visualizer.c
+	gcc -O3 -Wall $(DEBUG) visualizer.c -o visualizer -lGL -lglut
+
 debug:
 	$(MAKE) DEBUG="-g -O0"
 

@@ -266,23 +266,15 @@ static void converse(){
 	while(fgets(input, 20, stdin)){
 		prepOrganismMemory(&alex);
 
-		if(*input>='0' && *input<='9'){
-			int in = atoi(input);
-			for(in--; in>=0; in--) memory[in] = 1;
-		}else{
-			int i = 0;
-			while(input[i]){
-				if((input[i]>='a'&&input[i]<='z') || (input[i]>='A'&&input[i]<='Z')) memory[i]=1;
-				i++;
-			}
+		int len = strlen(input) - 2; // Ignore newline and null byte
+		for (; len >= 0; len--) {
+			memory[len] = (input[len] == 'x');
 		}
 
 		tickOrganism(&alex);
 
 		memory = alex.memory+alex.memStart;
-		int i = 10, out = 0;
-		for(; i < 20; i++) if(memory[i]) out++;
-		printf("%d\n", out);
+		printf("%d\n", memory[2]);
 	}
 	free(alex.neurons);
 }
@@ -363,8 +355,8 @@ static void navigate(){
 
 int main(int argc, char** argv){
 	srandom(time(NULL));
-	simulate();
-	//converse();
+	//simulate();
+	converse();
 	//navigate();
 	return 0;
 }
