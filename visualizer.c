@@ -16,20 +16,28 @@ typedef struct {
 } point;
 
 typedef struct {
+	point loc;
+	char value;
+	int mutators;
+	int numReading;
+} cell;
+
+typedef struct {
 	int sizes[3];
 	int *(cells[3]);
 	int value;
+	char valueStable;
 	point loc;
 } neuron;
 
-point cells[256];
+cell cells[256];
 neuron* neurons;
 int numNeurons;
 
 void paintCell(int ix)
 {
-	float x = cells[ix].x;
-	float y = cells[ix].y;
+	float x = cells[ix].loc.x;
+	float y = cells[ix].loc.y;
 #define w 0.04
 	glBegin(GL_LINE_LOOP);
 	glVertex3f(x-w, y+w, 0);
@@ -37,14 +45,14 @@ void paintCell(int ix)
 	glVertex3f(x+w, y-w, 0);
 	glVertex3f(x-w, y-w, 0);
 	glEnd();
-	if ((ix & 64)<<1 ^ (ix & 128)) {
+	if (cells[ix].value) {
 		glBegin(GL_TRIANGLES);
 		glVertex3f(x-w, y-w, 0);
 		glVertex3f(x+w, y+w, 0);
 		glVertex3f(x-w, y+w, 0);
 		glEnd();
 	}
-	if (ix & 64) {
+	if ((ix & 64)<<1 ^ (ix & 128)) {
 		glBegin(GL_TRIANGLES);
 		glVertex3f(x+w, y+w, 0);
 		glVertex3f(x-w, y-w, 0);
@@ -56,7 +64,7 @@ void paintCell(int ix)
 void addLine(int n, int c, int X, int Y)
 {
 	glVertex3f(neurons[n].loc.x, neurons[n].loc.y, 0);
-	glVertex3f(cells[c].x + X*w, cells[c].y + Y*w, 0);
+	glVertex3f(cells[c].loc.x + X*w, cells[c].loc.y + Y*w, 0);
 }
 
 void drawGroup(int n, int *cells, int numCells, char color, int X, int Y)
@@ -130,10 +138,10 @@ point *getNearest(int X, int Y)
 		}
 	}
 	for (i = 0; i < 256; i++) {
-		float score = fabsf(x-cells[i].x) + fabsf(y-cells[i].y);
+		float score = fabsf(x-cells[i].loc.x) + fabsf(y-cells[i].loc.y);
 		if (score < best) {
 			best = score;
-			ret = &cells[i];
+			ret = &cells[i].loc;
 		}
 	}
 	return ret;
@@ -180,15 +188,91 @@ void allDatMouseMotion(int x, int y)
 	}
 }
 
+char globalStuffChangedFlag = 1;
+int count = 0;
+
+void analyzeNeuron(int N)
+{
+	neuron *n = neurons + N;
+	int *curList;
+	if (cells[n->value].mutators == 0 && n->valueStable == 0) {
+		globalStuffChangedFlag = 1;
+		puts("Trimmed an out");
+		n->valueStable = 1;
+		int value = cells[n->value].value;
+		int i = n->sizes[2] - 1;
+		curList = n->cells[2];
+		for (; i >= 0; i--) {
+			if (cells[curList[i]].value == value)
+				cells[curList[i]].mutators--;
+		}
+	}
+	int i, j = 0;
+	for (; j < 2; j++) {
+		i = n->sizes[j] - 1;
+		curList = n->cells[j];
+		for (; i >= 0; i--) {
+			if (cells[curList[i]].value == 0 && cells[curList[i]].mutators == 0) {
+				globalStuffChangedFlag = 1;
+				count++;
+				cells[curList[i]].numReading--;
+				curList[i] = curList[--(n->sizes[j])];
+			}
+		}
+	}
+	i = n->sizes[0] - 1;
+	j = n->sizes[1] - 1;
+	curList = n->cells[0];
+	int *otrList = n->cells[1];
+	for (; i >= 0; i--) {
+		if (cells[curList[i]].value == 1 && cells[curList[i]].mutators == 0) {
+			for (; j >= 0 && (cells[otrList[j]].value != 1 || cells[otrList[j]].mutators != 0); j--);
+			if (j < 0) {
+				i = -1;
+			} else {
+				globalStuffChangedFlag = 1;
+				count += 2;
+				cells[curList[i]].numReading--;
+				cells[otrList[j]].numReading--;
+				curList[i] = curList[--(n->sizes[0])];
+				otrList[j] = otrList[--(n->sizes[1])];
+				j--;
+			}
+		}
+	}
+	i = n->sizes[2] - 1;
+	curList = n->cells[2];
+	for (; i >= 0; i--) {
+		if (cells[curList[i]].numReading == 0 || cells[curList[i]].mutators == 0) {
+			globalStuffChangedFlag = 1;
+			count++;
+			if (!n->valueStable || cells[curList[i]].value != cells[n->value].value) {
+				cells[curList[i]].mutators--;
+			}
+			curList[i] = curList[--(n->sizes[2])];
+		}
+	}
+}
+
 int main(int argc, char **argv)
 {
 	int i = 0, j;
 	for (; i < 16; i++) {
 		for (j = 0; j < 16; j++) {
-			cells[16*i + j].x = (1+2*i)/16.0 - 1;
-			cells[16*i + j].y = (1+2*j)/16.0 - 1;
+			cells[16*i + j].loc.x = (1+2*i)/16.0 - 1;
+			cells[16*i + j].loc.y = (1+2*j)/16.0 - 1;
+			cells[16*i + j].value = (i / 4) % 2;
+			cells[16*i + j].mutators = 0;
+			cells[16*i + j].numReading = 0;
 		}
 	}
+	for (i = 1; i <= 5; i++) {
+		cells[i].mutators = 1;
+	}
+	for (i = 10; i < 16; i++) {
+		cells[i].numReading = 1;
+	}
+	cells[4].numReading = 1;
 	parseNum(0);
 	numNeurons = parseNum(0);
 	neurons = calloc(numNeurons, sizeof(neuron));
@@ -198,14 +282,37 @@ int main(int argc, char **argv)
 			neurons[i].sizes[j] = parseNum(0);
 			neurons[i].cells[j] = malloc(neurons[i].sizes[j] * sizeof(int));
 			for (k = 0; k < neurons[i].sizes[j]; k++) {
-				neurons[i].cells[j][k] = parseNum(0);
+				int c = parseNum(0);
+				neurons[i].cells[j][k] = c;
+				if (j == 2) {
+					cells[c].mutators++;
+				} else {
+					cells[c].numReading++;
+				}
 			}
 			int c = getc(stdin);
 			if (c != '\n')
 				ungetc(c, stdin);
 		}
-		neurons[i].value = parseNum(0);
+		int c = parseNum(0);
+		neurons[i].value = c;
+		cells[c].numReading++;
+		neurons[i].valueStable = 0;
 	}
+	while (globalStuffChangedFlag) {
+		globalStuffChangedFlag = 0;
+		int i = numNeurons-1;
+		for (; i >= 0; i--) {
+			analyzeNeuron(i);
+		}
+	}
+	for (i = 0; i < 256; i++) {
+		if (cells[i].numReading == 0 && cells[i].mutators == 0) {
+			cells[i].loc.x = -1;
+			cells[i].loc.y = 1;
+		}
+	}
+	printf("::%d::\n", count);
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA);
 	glutInitWindowPosition(-1, -1);

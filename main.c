@@ -355,8 +355,8 @@ static void navigate(){
 
 int main(int argc, char** argv){
 	srandom(time(NULL));
-	//simulate();
-	converse();
+	simulate();
+	//converse();
 	//navigate();
 	return 0;
 }
