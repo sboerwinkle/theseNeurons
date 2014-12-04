@@ -197,7 +197,6 @@ void analyzeNeuron(int N)
 	int *curList;
 	if (cells[n->value].mutators == 0 && n->valueStable == 0) {
 		globalStuffChangedFlag = 1;
-		puts("Trimmed an out");
 		n->valueStable = 1;
 		int value = cells[n->value].value;
 		int i = n->sizes[2] - 1;
@@ -240,6 +239,16 @@ void analyzeNeuron(int N)
 			}
 		}
 	}
+	i = n->sizes[1] - 1;
+	j = 0;
+	curList = n->cells[1];
+	for (; i >= 0; i--) {
+		if (cells[curList[i]].value == 1 && cells[curList[i]].mutators == 0) {
+			j++;
+		}
+	}
+	if (j >= n->sizes[0])
+		puts("Yippee ki yay!");
 	i = n->sizes[2] - 1;
 	curList = n->cells[2];
 	for (; i >= 0; i--) {
@@ -312,7 +321,18 @@ int main(int argc, char **argv)
 			cells[i].loc.y = 1;
 		}
 	}
-	printf("::%d::\n", count);
+	printf("%d %d\n", count, numNeurons);
+	int k = 0;
+	neuron *n;
+	for (; k < numNeurons; k++) {
+		n = neurons + k;
+		for(i = 0; i < 3; i++){
+			printf("%d ", n->sizes[i]);
+			for (j = n->sizes[i] - 1; j >= 0; j--) printf("%d ", n->cells[i][j]);
+			fputc('\n', stdout);
+		}
+		printf("%d\n", n->value);
+	}
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA);
 	glutInitWindowPosition(-1, -1);
