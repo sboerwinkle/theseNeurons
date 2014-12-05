@@ -248,7 +248,7 @@ void analyzeNeuron(int N)
 		}
 	}
 	if (j >= n->sizes[0])
-		puts("Yippee ki yay!");
+		fputs("Yippee ki yay!\n", stderr);
 	i = n->sizes[2] - 1;
 	curList = n->cells[2];
 	for (; i >= 0; i--) {
@@ -322,9 +322,9 @@ int main(int argc, char **argv)
 		}
 	}
 	printf("%d %d\n", count, numNeurons);
-	int k = 0;
+	int k = numNeurons - 1;
 	neuron *n;
-	for (; k < numNeurons; k++) {
+	for (; k >= 0; k--) {
 		n = neurons + k;
 		for(i = 0; i < 3; i++){
 			printf("%d ", n->sizes[i]);

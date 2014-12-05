@@ -258,6 +258,36 @@ static void simulate(){
 	quitMap();
 }
 
+static void compare() {
+	organism alex, adam;
+	importOrganism(&alex, "best.org");
+	importOrganism(&adam, "simpler.org");
+	char* memory = alex.memory;
+	char* memory2 = adam.memory;
+	while(1) {
+		prepOrganismMemory(&alex);
+		prepOrganismMemory(&adam);
+
+		int i = 1;
+		for (; i <= 5; i++)
+			memory[i] = memory2[i] = random()%2;
+
+		tickOrganism(&alex);
+		tickOrganism(&adam);
+
+		memory = alex.memory+alex.memStart;
+		memory2 = adam.memory+adam.memStart;
+
+		for (i = 10; i <= 15; i++)
+			if (memory[i] != memory2[i])
+				puts("Dr. Octagonapus BLAH");
+		if (memory[4] != memory2[4])
+			puts("AAAAAAAA");
+	}
+	free(alex.neurons);
+	free(adam.neurons);
+}
+
 static void converse(){
 	organism alex;
 	importOrganism(&alex, "best.org");
@@ -358,5 +388,6 @@ int main(int argc, char** argv){
 	simulate();
 	//converse();
 	//navigate();
+	//compare();
 	return 0;
 }
