@@ -128,6 +128,7 @@ point *getNearest(int X, int Y)
 	float x = toGlSpace(X, 0);
 	float y = toGlSpace(Y, 1);
 	float best = w*3;
+	int bestIx = -1;
 	point* ret = NULL;
 	int i = 0;
 	for (; i < numNeurons; i++) {
@@ -135,6 +136,7 @@ point *getNearest(int X, int Y)
 		if (score < best) {
 			best = score;
 			ret = &neurons[i].loc;
+			bestIx = i;
 		}
 	}
 	for (i = 0; i < 256; i++) {
@@ -142,9 +144,41 @@ point *getNearest(int X, int Y)
 		if (score < best) {
 			best = score;
 			ret = &cells[i].loc;
+			bestIx = i;
 		}
 	}
+	fprintf(stderr, "%d\n", bestIx);
 	return ret;
+}
+
+void drift(int n, int c, point *ndeltas, point *deltas) {
+	double dx = neurons[n].loc.x - cells[c].loc.x;
+	double dy = neurons[n].loc.y - cells[c].loc.y;
+	double dist = sqrt(dx*dx + dy*dy);
+	if (dist == 0) return;
+	double force = (dist - .25) / 4;
+	if (force > .04) force = .04;
+	if (force < -.04) force = -.04;
+	dx /= dist;
+	dy /= dist;
+	ndeltas[n].x -= dx*force/5;
+	ndeltas[n].y -= dy*force/5;
+	deltas[c].x += dx*force;
+	deltas[c].y += dy*force;
+}
+
+void ndrift(int n, int n2, point *ndeltas) {
+	double dx = neurons[n].loc.x - neurons[n2].loc.x;
+	double dy = neurons[n].loc.y - neurons[n2].loc.y;
+	double dist = sqrt(dx*dx + dy*dy);
+	if (dist >= .75 || dist == 0) return;
+	double force = (.75 - dist) / 8;
+	dx /= dist;
+	dy /= dist;
+	ndeltas[n].x += dx*force;
+	ndeltas[n].y += dy*force;
+	ndeltas[n2].x -= dx*force;
+	ndeltas[n2].y -= dy*force;
 }
 
 void allDemReglarKeys(unsigned char code, int x, int y)
@@ -156,6 +190,39 @@ void allDemReglarKeys(unsigned char code, int x, int y)
 			loc->y = 1;
 			paint();
 		}
+		return;
+	}
+	if (code == ' ') {
+		point *deltas = calloc(256, sizeof(point));
+		point *ndeltas = calloc(numNeurons, sizeof(point));
+		neuron *n;
+		int i = numNeurons - 1;
+		int j, k;
+		for (; i >= 0; i--) {
+			n = neurons + i;
+			for (j = 0; j < 3; j++) {
+				for (k = n->sizes[j] - 1; k >= 0; k--) {
+					int c = n->cells[j][k];
+					drift(i, c, ndeltas, deltas);
+					deltas[c].x += j == 2 ? .025 : -.025;
+					ndeltas[i].x -= j == 2 ? .005 : -.005;
+				}
+			}
+			drift(i, n->value, ndeltas, deltas);
+		}
+		for (i = 0; i < 256; i++) {
+			cells[i].loc.x += deltas[i].x;
+			cells[i].loc.y += deltas[i].y;
+		}
+		for (i = 0; i < numNeurons; i++) {
+			for (j = i + 1; j < numNeurons; j++)
+				ndrift(i, j, ndeltas);
+			neurons[i].loc.x += ndeltas[i].x;
+			neurons[i].loc.y += ndeltas[i].y;
+		}
+		free(deltas);
+		paint();
+		return;
 	}
 	if (code == 'A' || code == 27) {
 		freeStuff();

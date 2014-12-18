@@ -20,4 +20,4 @@ extern char doStepGuy(organism* who);
 extern void doStepMap();
 
 extern void mapWriteEverythingToFile(int fd);
-extern void mapReadEverythingFromFile(int fd);
+extern void mapReadEverythingFromFile(int fd, char reset);

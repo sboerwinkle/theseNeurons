@@ -49,7 +49,7 @@ static char writeEverythingToFile(organism *orgs, char *file)
 	return 0;
 }
 
-static char readEverythingFromFile(organism *orgs, char *file)
+static char readEverythingFromFile(organism *orgs, char *file, char reset)
 {
 	int fd = open(file, O_RDONLY);
 	if (fd == -1) {
@@ -58,6 +58,8 @@ static char readEverythingFromFile(organism *orgs, char *file)
 	}
 	int i = 0;
 	read(fd, &bestScore, sizeof(int));
+	if (reset)
+		bestScore = 0;
 	for (; i < numKids; i++) {
 		orgs[i].memStart = 0;
 		read(fd, orgs[i].memory, mem);
@@ -87,7 +89,7 @@ static char readEverythingFromFile(organism *orgs, char *file)
 		*orgs[i].myLoc = orgs+i;
 		rooms[orgs[i].myRoom].numOrganisms++;
 	}
-	mapReadEverythingFromFile(fd);
+	mapReadEverythingFromFile(fd, reset);
 	close(fd);
 	return 0;
 }
@@ -127,6 +129,16 @@ static void mutateAddNeuron(organism* who){ // Copy from an existing neuron
 	}
 }
 
+static void mutateAddConnection(neuron *n, int type, int candidate)
+{
+	int* tmp = n->sets[type];
+	int i = n->nums[type]-1;
+	for(; i>=0; i--){
+		if(tmp[i] == candidate) return; // Potential spot for improvement - should I keep the memory locations sorted?
+	}
+	tmp[n->nums[type]++] = candidate;
+}
+
 static char mutateChangeNeuron(organism* who, neuron* n){
 	int type = random()%8;
 	if(type >= 7){ // Then ur dead lol
@@ -139,14 +151,16 @@ static char mutateChangeNeuron(organism* who, neuron* n){
 			n->sets[type][random()%(1+n->nums[type])] = n->sets[type][n->nums[type]];
 		}
 	}else if(type/3 == 1){
-		int candidate = random()%mem;
-		type-=3;
-		int* tmp = n->sets[type];
-		int i = n->nums[type]-1;
-		for(; i>=0; i--){
-			if(tmp[i] == candidate) return 1; // Potential spot for improvement - should I keep the memory locations sorted?
+		int candidate = random() % mem;
+		type -= 3;
+		mutateAddConnection(n, type, candidate);
+		if (random() % 2) { // Then we're going to connect candidate to another neuron too, thereby forming a connection
+			if (type == 2)
+				type = random() % 2;
+			else
+				type = 2;
+			mutateAddConnection(who->neurons + random() % who->numNeurons, type, candidate);
 		}
-		tmp[n->nums[type]++] = candidate;
 	}else n->value = random()%mem;
 	return 1;
 }
@@ -184,14 +198,21 @@ static int getDonor(int victim){
 	return (subPopMasks[level] & victim) + (random() % subPopSizes[level]);
 }
 
-static void simulate(){
+static void simulate(int argc, char** argv){
 #ifdef CONTINENTS
 	initSubPops();
 #endif
 	initMap();
 
 	organism *allMyChildren = malloc(sizeof(organism)*numKids);
-	if (readEverythingFromFile(allMyChildren, "save.dat")) {
+	char reset = 0;
+	for (argc--; argc > 0; argc--) {
+		if (0 == strcmp(argv[argc], "reset")) {
+			puts("reset!");
+			reset = 1;
+		}
+	}
+	if (readEverythingFromFile(allMyChildren, "save.dat", reset)) {
 #define numSources 5
 		organism *sources = malloc(sizeof(organism) * numSources);
 		char name[14];
@@ -385,7 +406,7 @@ static void navigate(){
 
 int main(int argc, char** argv){
 	srandom(time(NULL));
-	simulate();
+	simulate(argc, argv);
 	//converse();
 	//navigate();
 	//compare();

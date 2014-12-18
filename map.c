@@ -221,10 +221,10 @@ void doStepMap(){
 	int i = 0;
 	for(; i < numRooms; i++){
 		if(rooms[i].roomTape[0]){
-			int num = 1+abs(3-rooms[i].numOrganisms);
+			int num = 1+abs(3-rooms[i].numOrganisms)   +3;
 			int j = 0;
 			for(; j < rooms[i].numOrganisms; j++){
-				if(0 == random()%num) givePointGuy(rooms[i].occupants[j]);
+				if(random()%num <= 3) givePointGuy(rooms[i].occupants[j]);
 			}
 		}
 	}
@@ -266,7 +266,7 @@ void mapWriteEverythingToFile(int fd)
 	write(fd, &mapVersion, sizeof(int));
 }
 
-void mapReadEverythingFromFile(int fd)
+void mapReadEverythingFromFile(int fd, char reset)
 {
 	int i = 0;
 	for (; i < numRooms; i++) {
@@ -276,4 +276,5 @@ void mapReadEverythingFromFile(int fd)
 		read(fd, &rooms[i].doorDown, 1);
 	}
 	read(fd, &mapVersion, sizeof(int));
+	if (reset) mapVersion = 0;
 }
