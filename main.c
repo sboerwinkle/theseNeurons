@@ -115,14 +115,14 @@ static void mutateAddNeuron(organism* who){ // Copy from an existing neuron
 	if(who->numNeurons-1){
 		int i = random()%(who->numNeurons-1);
 		memcpy(tmp, who->neurons+i, sizeof(neuron));
-		i = random()%mem;
+		/*i = random()%mem;
 		int j, set=0;
 		for(set = 0; set < 3; set++){
 			for(j=0; j < tmp->nums[set]; j++){
 				tmp->sets[set][j] = (tmp->sets[set][j]+i)%mem;
 			}
 		}
-		tmp->value = (tmp->value+i)%mem;
+		tmp->value = (tmp->value+i)%mem;*/
 	}else{
 		tmp->nums[0] = tmp->nums[1] = tmp->nums[2] = 0;
 		tmp->value = random()%mem;
