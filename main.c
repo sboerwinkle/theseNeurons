@@ -165,8 +165,34 @@ static char mutateChangeNeuron(organism* who, neuron* n){
 	return 1;
 }
 
+#define swapMacro(a, b, c) \
+if (a == b) {\
+	if (random() < RAND_MAX/2)\
+		a = c;\
+} else if (a == c) {\
+	if (random() < RAND_MAX/2)\
+		a = b;\
+}
+static void mutateSwapCells(organism *who) {
+	int c1 = random()%mem;
+	int c2 = random()%mem;
+	int i = who->numNeurons - 1;
+	int j, k;
+	neuron *n;
+	for (; i >= 0; i--) {
+		n = who->neurons + i;
+		for (j = 0; j < 3; j++) {
+			for (k = n->nums[j] - 1; k >= 0; k--) {
+				swapMacro(n->sets[j][k], c1, c2);
+			}
+		}
+		swapMacro(n->value, c1, c2);
+	}
+}
+
 static void mutateOrganism(organism* who){
-	while(random() < RAND_MAX/25) mutateAddNeuron(who);
+	while (random() < RAND_MAX/25) mutateAddNeuron(who);
+	if (random() < RAND_MAX/6) mutateSwapCells(who);
 	int i = 0;
 	while(i < who->numNeurons){
 		if(random() < RAND_MAX/20){
