@@ -1,3 +1,4 @@
+//CAUTION - Changing these will probably require modifications to the saving / reading functions
 
 #define mem 256
 
@@ -8,6 +9,9 @@
 
 #define mapSize 20
 #define numMines 32
+
+//mutation types
+#define mTypes 7
 
 typedef struct{
 	int sets[3][mem];
@@ -20,6 +24,8 @@ struct room;
 
 #define tapeSize 8
 typedef struct organism{
+	unsigned char mTally[3][mTypes];
+
 	char memory[mem*2];
 	int memStart;
 	neuron *neurons;

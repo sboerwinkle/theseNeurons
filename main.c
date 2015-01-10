@@ -11,6 +11,48 @@
 
 int bestScore = 0;
 
+static long totalMutations[4][mTypes] = {{0}, {0}, {0}, {0}};
+
+static void tallyMutation(organism *who, int type) {
+	totalMutations[0][type]++;
+	who->mTally[0][type]++;
+}
+
+static void tallyReproduction(organism *who, organism *kid) {
+	int i = 0;
+	int parentLevel = 1;
+	int j;
+	for (; i < 3; i++) {
+		for (j = mTypes-1; j >= 0; j--)
+			totalMutations[parentLevel][j] += who->mTally[i][j];
+		parentLevel++;
+	}
+	char mTally[2][mTypes];
+	memcpy(mTally, who->mTally, mTypes*2);
+	memcpy(kid->mTally+1, mTally, mTypes*2);
+	memset(kid->mTally[0], 0, mTypes);
+}
+
+static void printTallies() {
+	static char * const names[mTypes] = {
+		"Additions:     ",
+		"Cell Swaps:    ",
+		"Removals:      ",
+		"Con Removals:  ",
+		"Con Additions: ",
+		"+Chained:      ",
+		"Type Changes:  "};
+	puts("               Total P     GP    GGP");
+	int i = 0, j;
+	for (; i < mTypes; i++) {
+		fputs(names[i], stdout);
+		for (j = 0; j < 4; j++) {
+			printf("%5ld ", totalMutations[j][i]);
+		}
+		fputc('\n', stdout);
+	}
+}
+
 static char writeEverythingToFile(organism *orgs, char *file)
 {
 	int fd = creat(file, 00666);
@@ -20,6 +62,7 @@ static char writeEverythingToFile(organism *orgs, char *file)
 	}
 	int i = 0;
 	write(fd, &bestScore, sizeof(int));
+	write(fd, totalMutations, sizeof(totalMutations));
 	for (; i < numKids; i++) {
 		write(fd, orgs[i].memory+orgs[i].memStart, mem);
 		write(fd, &orgs[i].numNeurons, sizeof(int));
@@ -31,6 +74,7 @@ static char writeEverythingToFile(organism *orgs, char *file)
 				write(fd, orgs[i].neurons[j].sets[k], orgs[i].neurons[j].nums[k]*sizeof(int));
 			write(fd, &orgs[i].neurons[j].value, sizeof(int));
 		}
+		write(fd, orgs[i].mTally, mTypes*3);
 		write(fd, &orgs[i].score, sizeof(int));
 		write(fd, &orgs[i].age, sizeof(int));
 		write(fd, &orgs[i].myTape, tapeSize);
@@ -58,8 +102,11 @@ static char readEverythingFromFile(organism *orgs, char *file, char reset)
 	}
 	int i = 0;
 	read(fd, &bestScore, sizeof(int));
-	if (reset)
+	read(fd, totalMutations, sizeof(totalMutations));
+	if (reset) {
 		bestScore = 0;
+		memset(totalMutations, 0, sizeof(totalMutations));
+	}
 	for (; i < numKids; i++) {
 		orgs[i].memStart = 0;
 		read(fd, orgs[i].memory, mem);
@@ -73,6 +120,7 @@ static char readEverythingFromFile(organism *orgs, char *file, char reset)
 				read(fd, orgs[i].neurons[j].sets[k], orgs[i].neurons[j].nums[k]*sizeof(int));
 			read(fd, &orgs[i].neurons[j].value, sizeof(int));
 		}
+		read(fd, orgs[i].mTally, mTypes*3);
 		read(fd, &orgs[i].score, sizeof(int));
 		read(fd, &orgs[i].age, sizeof(int));
 		read(fd, &orgs[i].myTape, tapeSize);
@@ -107,6 +155,7 @@ static void copyOrganism(organism* to, organism* from){ // Doesn't actually copy
 	memcpy(to->neurons, holdThis, sizeof(neuron)*to->numNeurons);
 	to->score = to->age = 0;
 	memset(to->myTape, 0, tapeSize);
+	tallyReproduction(from, to);
 }
 
 static void mutateAddNeuron(organism* who){ // Copy from an existing neuron
@@ -144,24 +193,31 @@ static char mutateChangeNeuron(organism* who, neuron* n){
 	if(type >= 7){ // Then ur dead lol
 		memcpy(n, who->neurons+(--who->numNeurons), sizeof(neuron));
 		who->neurons = realloc(who->neurons, sizeof(neuron)*who->numNeurons);
+		tallyMutation(who, 2);
 		return 0;
 	}else if(type/3 == 0){
 		if(n->nums[type]){
 			n->nums[type]--;
 			n->sets[type][random()%(1+n->nums[type])] = n->sets[type][n->nums[type]];
+			tallyMutation(who, 3);
 		}
 	}else if(type/3 == 1){
 		int candidate = random() % mem;
 		type -= 3;
 		mutateAddConnection(n, type, candidate);
+		tallyMutation(who, 4);
 		if (random() % 2) { // Then we're going to connect candidate to another neuron too, thereby forming a connection
 			if (type == 2)
 				type = random() % 2;
 			else
 				type = 2;
 			mutateAddConnection(who->neurons + random() % who->numNeurons, type, candidate);
+			tallyMutation(who, 5);
 		}
-	}else n->value = random()%mem;
+	} else {
+		n->value = random()%mem;
+		tallyMutation(who, 6);
+	}
 	return 1;
 }
 
@@ -191,13 +247,21 @@ static void mutateSwapCells(organism *who) {
 }
 
 static void mutateOrganism(organism* who){
-	while (random() < RAND_MAX/25) mutateAddNeuron(who);
-	if (random() < RAND_MAX/6) mutateSwapCells(who);
+	while (random() < RAND_MAX/25) {
+		mutateAddNeuron(who);
+		tallyMutation(who, 0);
+	}
+	if (random() < RAND_MAX/6) {
+		mutateSwapCells(who);
+		tallyMutation(who, 1);
+	}
 	int i = 0;
-	while(i < who->numNeurons){
-		if(random() < RAND_MAX/20){
+	while (i < who->numNeurons) {
+		if(random() < RAND_MAX/20) {
 			if(mutateChangeNeuron(who, who->neurons+i)) i++;
-		}else i++;
+		} else {
+			i++;
+		}
 	}
 }
 
@@ -286,11 +350,12 @@ static void simulate(int argc, char** argv){
 			}
 			i++;
 		}
-		if(++j%200 == 0){
+		if(++j%400 == 0){
 			changeMap();
 			if(j == 2000){
+				printTallies();
 				printMap();
-				fputs("\n\n\n", stdout);
+				fputs("\n", stdout);
 				j = 0;
 				writeEverythingToFile(allMyChildren, "save.tmp");
 				system("mv save.tmp save.dat");
