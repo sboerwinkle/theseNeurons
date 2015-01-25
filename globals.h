@@ -1,5 +1,7 @@
 //CAUTION - Changing these will probably require modifications to the saving / reading functions
 
+#define talliedGens 5
+
 #define mem 256
 
 #define kidsLog2 8
@@ -11,7 +13,7 @@
 #define numMines 32
 
 //mutation types
-#define mTypes 7
+#define mTypes 9
 
 typedef struct{
 	int sets[3][mem];
@@ -24,7 +26,7 @@ struct room;
 
 #define tapeSize 8
 typedef struct organism{
-	unsigned char mTally[3][mTypes];
+	unsigned char mTally[talliedGens][mTypes];
 
 	char memory[mem*2];
 	int memStart;

@@ -221,10 +221,10 @@ void doStepMap(){
 	int i = 0;
 	for(; i < numRooms; i++){
 		if(rooms[i].roomTape[0]){
-			int num = 1+abs(3-rooms[i].numOrganisms)   +3;
+			int num = 1+abs(3-rooms[i].numOrganisms)   +1;
 			int j = 0;
 			for(; j < rooms[i].numOrganisms; j++){
-				if(random()%num <= 3) givePointGuy(rooms[i].occupants[j]);
+				if(random()%num <= 1) givePointGuy(rooms[i].occupants[j]);
 			}
 		}
 	}
